@@ -91,7 +91,7 @@ def extract_info(data):
 
     
 ####################################################################################        
-st.set_page_config(page_title="Bot Alex!",page_icon="👀")    
+st.set_page_config(page_title="Bot Alex Doc-AI",page_icon="👀")    
 # emojis: https://www.webfx.com/tools/emoji-cheat-sheet/    
 # create a streamlit app
 st.title("🔎 Bot Alex - Doc AI")
