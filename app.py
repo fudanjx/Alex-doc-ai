@@ -103,7 +103,8 @@ history = ChatMessageHistory()
 
 #####################################
 with st.sidebar:
-    data_df_dase = pd.read_csv('prompt_template.csv')
+    # data_df_dase = pd.read_csv('prompt_template.csv')
+    data_df_dase = pd.read_csv('https://www.dropbox.com/s/6v3ldwaoqe80iv0/prompt_template.csv?dl=1')
     prompt_category_list = data_df_dase['prompt_category'].tolist()
 
     option = st.selectbox(
