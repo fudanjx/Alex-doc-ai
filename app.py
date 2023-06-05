@@ -91,7 +91,7 @@ def extract_info(data):
 
     
 ####################################################################################        
-st.set_page_config(page_title="Bot Alex Doc-AI",page_icon="👀")    
+st.set_page_config(page_title="Bot Alex!",page_icon="👀")    
 # emojis: https://www.webfx.com/tools/emoji-cheat-sheet/    
 # create a streamlit app
 st.title("🔎 Bot Alex - Doc AI")
@@ -105,6 +105,7 @@ history = ChatMessageHistory()
 with st.sidebar:
     # data_df_dase = pd.read_csv('prompt_template.csv')
     data_df_dase = pd.read_csv('https://www.dropbox.com/s/6v3ldwaoqe80iv0/prompt_template.csv?dl=1')
+
     prompt_category_list = data_df_dase['prompt_category'].tolist()
 
     option = st.selectbox(
@@ -122,8 +123,10 @@ with st.expander("###### Upload your documents"):
     with col1:
         jd_upload(upload_name1)
     with col2:
-        cv_upload(upload_name2)
-     
+        if type(upload_name2) != float:
+            cv_upload(upload_name2)
+        else:
+            st.session_state.context_02 = "nothing here"
 
 if anthropic.api_key:
 
@@ -131,7 +134,7 @@ if anthropic.api_key:
         inputs =''
         st.session_state.Text_Expert = Text_Expert(inputs, defult_prompt)
         st.session_state.history = []      
-
+ 
     with st.sidebar:
         with st.expander("#### Modify Base Propmt"):
             inputs = st.text_area("",st.session_state.Text_Expert._default_prompt(prompt_from_template=defult_prompt))
@@ -144,7 +147,7 @@ if anthropic.api_key:
 
     
     with st.sidebar:
-        if ("context_01" in st.session_state)&("context_02" in st.session_state):
+        if ("context_01" in st.session_state):
             # create a text input widget for a question
             question = st.text_area("##### Ask a question")
             # create a button to run the model
