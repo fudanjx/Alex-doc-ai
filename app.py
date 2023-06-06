@@ -19,7 +19,7 @@ import pandas as pd
 
 ##################################################################################
 class Text_Expert:
-    def __init__(self, inputs, prompt_from_template):
+    def __init__(self, inputs, prompt_from_template, temperture):
                
         self.system_prompt = self.get_system_prompt(inputs, prompt_from_template)
 
@@ -29,10 +29,9 @@ class Text_Expert:
             [self.system_prompt, self.user_prompt]
         )
 
-        self.chat = ChatAnthropic(model='claude-v1-100k', max_tokens_to_sample=1000, streaming=True, callbacks=[StreamlitCallbackHandler()])
+        self.chat = ChatAnthropic(model='claude-v1-100k', temperature =temperture, max_tokens_to_sample=1024, streaming=True, callbacks=[StreamlitCallbackHandler()])
 
         self.chain = LLMChain(llm=self.chat, prompt=full_prompt_template)
-
                 
     def get_system_prompt(self, inputs, prompt_from_template):
         if self._default_prompt(prompt_from_template) != self._user_modified_prompt(inputs):
@@ -95,13 +94,57 @@ st.set_page_config(page_title="Bot Alex!",page_icon="👀")
 # emojis: https://www.webfx.com/tools/emoji-cheat-sheet/    
 # create a streamlit app
 st.title("🔎 Bot Alex - Doc AI")
-st.write("(Capable of analyzing any document.  You may refresh the page to start over)")
+with st.expander("###### Instructions"):
+    st.write("Capable of analyzing any document.  You may refresh the page to start over")
+    st.write("All the information in the conversation will be vanished after you close the session.")  
+    st.write("You can download the chat history at the end of the conversation")
 
-anthropic.api_key = st.text_input("###### Enter Anthropic API Key", type="password")
-os.environ['ANTHROPIC_API_KEY']= anthropic.api_key
+with st.expander("###### AI Model Setup"):
+    anthropic.api_key = st.text_input("Enter Anthropic API Key", type="password")
+    os.environ['ANTHROPIC_API_KEY']= anthropic.api_key   
+    col1, col2 = st.columns([2,2])
+    with col1:
+        style = st.radio(
+        "Style of the answer 👇",
+        ('Deterministic', 'Balanced', 'Creative'))
+        if style == 'Deterministic':
+            temperature = 0.1
+        if style == 'Balanced':
+            temperature = 0.4
+        if style == 'Creative':
+            temperature = 0.8 
+    
+    with col2:  
+        length = st.select_slider(
+        'Length of the answer📏',
+        options=['short', 'medium', 'long'])
+        if length == 'short':
+            max_token = "\n please try to answer within 200 words \n\n"
+        if length == 'medium':
+            max_token = "\n please try to answer within 500 words \n\n"
+        if length == 'long':
+            max_token = "\n please try to answer within 1000 words \n\n"
+
+        lang = st.selectbox('Language Preference 🗣',
+                            ('Professional', 'Legal', 'Simple', 'Chinese'))
+        if lang == 'Professional':
+            language = "\n please answer in Professional English \n\n"
+        if lang == 'Legal':
+            language = "\n please answer with Legal language \n\n"
+        if lang == 'Simple':
+            language = "\n please answer with simple English \n\n"
+        if lang == 'Chinese':
+            language = "\n please provide the answer in Chinese \n\n"
+            
+    if st.button("Enter"):
+        if not anthropic.api_key:
+            st.warning('Press enter after you iput the API key to apply', icon="⚠️")     
+        st.session_state.temperature = temperature
+        st.session_state.max_token = max_token
 history = ChatMessageHistory()
 
-#####################################
+####################################################################
+#setup the sidebar section
 with st.sidebar:
     # data_df_dase = pd.read_csv('prompt_template.csv')
     data_df_dase = pd.read_csv('https://www.dropbox.com/s/6v3ldwaoqe80iv0/prompt_template.csv?dl=1')
@@ -117,7 +160,8 @@ with st.sidebar:
     fix_prompt = df_selection['fix_prompt'].values[0]
     upload_name1 = df_selection['Doc_01'].values[0]
     upload_name2 = df_selection['Doc_02'].values[0]
-#######################################
+###################################################################
+#setup the context input section
 with st.expander("###### Upload your documents"):
     tab1, tab2 = st.tabs(["📂pdf doc  ", "📄  txt"])
     with tab1:      
@@ -138,28 +182,31 @@ with st.expander("###### Upload your documents"):
                 st.session_state.context_02 = st.text_area(upload_name2)
             else:
                 st.session_state.context_02 = "nothing here"
+                
+#######################################################################
+#calling the langchain to run the model
 if anthropic.api_key:
 
     if "Text_Expert" not in st.session_state:
         inputs =''
-        st.session_state.Text_Expert = Text_Expert(inputs, defult_prompt)
+        st.session_state.Text_Expert = Text_Expert(inputs, defult_prompt, temperature)
         st.session_state.history = []      
  
     with st.sidebar:
         with st.expander("#### Modify Base Prompt"):
-            inputs = st.text_area("",st.session_state.Text_Expert._default_prompt(prompt_from_template=defult_prompt))
+            inputs = st.text_area("modify_base_prompt",st.session_state.Text_Expert._default_prompt(prompt_from_template=defult_prompt), label_visibility="hidden")
         with st.expander("#### Review Base Prompt:"):
-            user_final_prompt = inputs+fix_prompt
+            user_final_prompt = inputs+fix_prompt+max_token+language
             user_final_prompt
-            defult_prompt = defult_prompt + fix_prompt
+            defult_prompt = defult_prompt + fix_prompt+max_token+language
             
-    st.session_state.Text_Expert = Text_Expert(user_final_prompt,defult_prompt)
+    st.session_state.Text_Expert = Text_Expert(user_final_prompt,defult_prompt, temperature)
 
     
     with st.sidebar:
         if ("context_01" in st.session_state):
             # create a text input widget for a question
-            question = st.text_area("##### Ask a question")
+            question = st.text_area("##### Ask a question", label_visibility="visible")
             # create a button to run the model
             if st.button("Run"):
                 # run the model
