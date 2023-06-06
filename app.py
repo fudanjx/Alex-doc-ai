@@ -118,16 +118,26 @@ with st.sidebar:
     upload_name1 = df_selection['Doc_01'].values[0]
     upload_name2 = df_selection['Doc_02'].values[0]
 #######################################
-with st.expander("###### Upload your documents"):          
-    col1, col2 = st.columns([2,2])
-    with col1:
-        jd_upload(upload_name1)
-    with col2:
-        if type(upload_name2) != float:
-            cv_upload(upload_name2)
-        else:
-            st.session_state.context_02 = "nothing here"
-
+with st.expander("###### Upload your documents"):
+    tab1, tab2 = st.tabs(["📂pdf doc  ", "📄  txt"])
+    with tab1:      
+        col1, col2 = st.columns([2,2])
+        with col1:
+            jd_upload(upload_name1)
+        with col2:
+            if type(upload_name2) != float:
+                cv_upload(upload_name2)
+            else:
+                st.session_state.context_02 = "nothing here"
+    with tab2:
+        col1, col2 = st.columns([2,2])
+        with col1:
+            st.session_state.context_01 = st.text_area(upload_name1)
+        with col2:
+            if type(upload_name2) != float:
+                st.session_state.context_02 = st.text_area(upload_name2)
+            else:
+                st.session_state.context_02 = "nothing here"
 if anthropic.api_key:
 
     if "Text_Expert" not in st.session_state:
@@ -136,7 +146,7 @@ if anthropic.api_key:
         st.session_state.history = []      
  
     with st.sidebar:
-        with st.expander("#### Modify Base Propmt"):
+        with st.expander("#### Modify Base Prompt"):
             inputs = st.text_area("",st.session_state.Text_Expert._default_prompt(prompt_from_template=defult_prompt))
         with st.expander("#### Review Base Prompt:"):
             user_final_prompt = inputs+fix_prompt
