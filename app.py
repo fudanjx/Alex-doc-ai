@@ -32,12 +32,19 @@ class Text_Expert:
         self.chat = ChatAnthropic(model='claude-v1-100k', temperature =temperture, max_tokens_to_sample=1024, streaming=True, callbacks=[StreamlitCallbackHandler()])
 
         self.chain = LLMChain(llm=self.chat, prompt=full_prompt_template)
-                
+        
+        # st.write(full_prompt_template)
+        
+        # st.write("context01: ", st.session_state.context_01)  
+        
+        # st.write("context02: ", st.session_state.context_02)  
+             
     def get_system_prompt(self, inputs, prompt_from_template):
         if self._default_prompt(prompt_from_template) != self._user_modified_prompt(inputs):
             system_prompt = self._user_modified_prompt(inputs)
         else:
             system_prompt = self._default_prompt(prompt_from_template)
+        system_prompt = '"""' + system_prompt+ '"""'
         return SystemMessagePromptTemplate.from_template(system_prompt)
     
     def _user_modified_prompt(self, inputs):
@@ -69,7 +76,9 @@ def jd_upload(upload_name):
 
     # if a pdf file is uploaded
     if pdf_file_01:
-        st.session_state.context_01 = retrieve_multi_pdf_text(pdf_file_01) 
+        return retrieve_multi_pdf_text(pdf_file_01) 
+    else:
+        return "" 
 
 def cv_upload(upload_name):
     # create a upload file widget for a pdf
@@ -77,8 +86,10 @@ def cv_upload(upload_name):
 
    # if a pdf file is uploaded
     if pdf_file_02:
-        st.session_state.context_02 = retrieve_multi_pdf_text(pdf_file_02)
-        
+        return retrieve_multi_pdf_text(pdf_file_02)
+    else:
+        return ""  
+         
 def extract_info(data):
     result = ""
     for item in data:
@@ -95,10 +106,11 @@ st.set_page_config(page_title="Bot Alex!",page_icon="👀")
 # create a streamlit app
 st.title("🔎 Bot Alex - Doc AI")
 with st.expander("###### Instructions"):
-    st.write("Capable of analyzing any document.  You may refresh the page to start over")
-    st.write("All the information in the conversation will be vanished after you close the session.")  
-    st.write("You can download the chat history at the end of the conversation")
-
+    st.info ("Capable of analyzing any document.  You may refresh the page to start over", icon="ℹ️")
+    st.warning("All the information in the conversation will be vanished after you close the session.", icon="⚠️") 
+    st.info("You can download the chat history at the end of the conversation", icon="ℹ️")
+    # st.snow()
+    
 with st.expander("###### AI Model Setup"):
     anthropic.api_key = st.text_input("Enter Anthropic API Key", type="password")
     os.environ['ANTHROPIC_API_KEY']= anthropic.api_key   
@@ -119,28 +131,28 @@ with st.expander("###### AI Model Setup"):
         'Length of the answer📏',
         options=['short', 'medium', 'long'])
         if length == 'short':
-            max_token = "\n please try to answer within 200 words \n\n"
+            max_token = "\n\n Please try to answer within 200 words \n"
         if length == 'medium':
-            max_token = "\n please try to answer within 500 words \n\n"
+            max_token = "\n\n Please try to answer within 500 words \n"
         if length == 'long':
-            max_token = "\n please try to answer within 1000 words \n\n"
+            max_token = "\n\n Please try to answer within 1000 words \n"
 
         lang = st.selectbox('Language Preference 🗣',
                             ('Professional', 'Legal', 'Simple', 'Chinese'))
         if lang == 'Professional':
-            language = "\n please answer in Professional English \n\n"
+            language = "\n Please answer in Professional English \n"
         if lang == 'Legal':
-            language = "\n please answer with Legal language \n\n"
+            language = "\n Please answer with Legal language \n"
         if lang == 'Simple':
-            language = "\n please answer with simple English \n\n"
+            language = "\n Please answer with simple English \n"
         if lang == 'Chinese':
-            language = "\n please provide the answer in Chinese \n\n"
+            language = "\n Please provide the answer in Chinese \n"
             
-    if st.button("Enter"):
-        if not anthropic.api_key:
-            st.warning('Press enter after you iput the API key to apply', icon="⚠️")     
-        st.session_state.temperature = temperature
-        st.session_state.max_token = max_token
+    if not anthropic.api_key:
+        st.warning('Press enter after you iput the API key to apply', icon="⚠️")     
+    else:
+        st.success('Model setup success!', icon="✅")    
+
 history = ChatMessageHistory()
 
 ####################################################################
@@ -167,22 +179,37 @@ with st.expander("###### Upload your documents"):
     with tab1:      
         col1, col2 = st.columns([2,2])
         with col1:
-            jd_upload(upload_name1)
+            content_01 = jd_upload(upload_name1)
         with col2:
             if type(upload_name2) != float:
-                cv_upload(upload_name2)
+                content_02 = cv_upload(upload_name2)
             else:
-                st.session_state.context_02 = "nothing here"
+                content_02 = "nothing here"
+        if st.button("Apply", key='apply_01'):
+            if len(content_01) == 0:
+                st.warning('Please upload the context info', icon="⚠️")
+            else:
+                st.session_state.context_01 = content_01
+                st.session_state.context_02 = content_02
+                st.success('Context info update success!', icon="✅")   
+
     with tab2:
         col1, col2 = st.columns([2,2])
         with col1:
-            st.session_state.context_01 = st.text_area(upload_name1)
+            content_03 = st.text_area(upload_name1)
         with col2:
             if type(upload_name2) != float:
-                st.session_state.context_02 = st.text_area(upload_name2)
+                content_04 = st.text_area(upload_name2)
             else:
-                st.session_state.context_02 = "nothing here"
-                
+                content_04 = "nothing here"
+        if st.button("Apply",key='apply_02'):
+            if len(content_03) == 0:
+                st.warning('Please upload the context info', icon="⚠️")
+            else:
+                st.session_state.context_01 = content_03
+                st.session_state.context_02 = content_04
+                st.success('Context info update success!', icon="✅")           
+        
 #######################################################################
 #calling the langchain to run the model
 if anthropic.api_key:
@@ -196,9 +223,9 @@ if anthropic.api_key:
         with st.expander("#### Modify Base Prompt"):
             inputs = st.text_area("modify_base_prompt",st.session_state.Text_Expert._default_prompt(prompt_from_template=defult_prompt), label_visibility="hidden")
         with st.expander("#### Review Base Prompt:"):
-            user_final_prompt = inputs+fix_prompt+max_token+language
+            user_final_prompt = inputs+ "\n\n" + fix_prompt+max_token+language
             user_final_prompt
-            defult_prompt = defult_prompt + fix_prompt+max_token+language
+            defult_prompt = defult_prompt + "\n\n" + fix_prompt+max_token+language
             
     st.session_state.Text_Expert = Text_Expert(user_final_prompt,defult_prompt, temperature)
 
