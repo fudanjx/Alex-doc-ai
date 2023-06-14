@@ -120,7 +120,7 @@ def list_to_string(lst):
 st.set_page_config(page_title="Bot Alex!",page_icon="👀")    
 # emojis: https://www.webfx.com/tools/emoji-cheat-sheet/    
 # create a streamlit app
-st.title("🔎 Bot Alex - Doc AI")
+st.title("🔎Bot Alex - AdminEase")
 with st.expander("###### Instructions"):
     st.info ("Capable of analyzing any document.  You may refresh the page to start over", icon="ℹ️")
     st.warning("All the information in the conversation will be vanished after you close the session.", icon="⚠️") 
