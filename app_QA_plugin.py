@@ -7,7 +7,11 @@ import streamlit as st
 def search_web(site, user_query):
     search = DuckDuckGoSearchRun()
     if site == 'Search Internet':
-        results = search.run(user_query)
+        if not user_query:
+            user_query = 'na'
+            results = search.run(user_query)
+        else:
+            results = search.run(user_query)
     else:
         results = search.run(f"site:{site} {user_query}")
     return results
