@@ -16,6 +16,7 @@ import PyPDF2
 import anthropic
 import os
 import pandas as pd
+import app_QA_plugin as QA
 
 ##################################################################################
 class Text_Expert:
@@ -89,7 +90,7 @@ def cv_upload(upload_name):
         return retrieve_multi_pdf_text(pdf_file_02)
     else:
         return ""  
-         
+#extract the message history dict into a string         
 def extract_info(data):
     result = ""
     for item in data:
@@ -99,7 +100,22 @@ def extract_info(data):
             result += 'AI: '+ item["data"]["content"] + "\n\n"
     return result
 
-    
+#extract the message dict of human input portion history into a list        
+def extract_human_history(data):
+    human_data = []
+    for d in data:
+        if d['type'] == 'human':
+            human_data.append(d['data']['content'])
+    return human_data
+
+# Define a function that takes a list as input and returns the reversed list
+def reverse_list(lst):
+    return lst[::-1]
+
+# Convert the list to a string, and add line break after each list item
+def list_to_string(lst):
+    return '\n\n'.join(str(i+1) + '. ' + str(item) for i, item in enumerate(lst))
+
 ####################################################################################        
 st.set_page_config(page_title="Bot Alex!",page_icon="👀")    
 # emojis: https://www.webfx.com/tools/emoji-cheat-sheet/    
@@ -154,6 +170,7 @@ with st.expander("###### AI Model Setup"):
         st.success('Model setup success!', icon="✅")    
 
 history = ChatMessageHistory()
+search_web_flag = False
 
 ####################################################################
 #setup the sidebar section
@@ -164,51 +181,63 @@ with st.sidebar:
     prompt_category_list = data_df_dase['prompt_category'].tolist()
 
     option = st.selectbox(
-        '#### Select Base Prompt:',
+        '#### Select Use Case:',
         prompt_category_list)
-
+          
     df_selection = data_df_dase[data_df_dase['prompt_category'] == option]
-    defult_prompt = df_selection['prompt'].values[0]
-    fix_prompt = df_selection['fix_prompt'].values[0]
-    upload_name1 = df_selection['Doc_01'].values[0]
-    upload_name2 = df_selection['Doc_02'].values[0]
+    
+    if option == 'Ask Anything!':
+        search_web_flag = True
+
+    else: 
+        default_prompt = df_selection['prompt'].values[0]
+        fix_prompt = df_selection['fix_prompt'].values[0]
+        upload_name1 = df_selection['Doc_01'].values[0]
+        upload_name2 = df_selection['Doc_02'].values[0]
 ###################################################################
 #setup the context input section
-with st.expander("###### Upload your documents"):
-    tab1, tab2 = st.tabs(["📂pdf doc  ", "📄  txt"])
-    with tab1:      
-        col1, col2 = st.columns([2,2])
-        with col1:
-            content_01 = jd_upload(upload_name1)
-        with col2:
-            if type(upload_name2) != float:
-                content_02 = cv_upload(upload_name2)
-            else:
-                content_02 = "nothing here"
-        if st.button("Apply", key='apply_01'):
-            if len(content_01) == 0:
-                st.warning('Please upload the context info', icon="⚠️")
-            else:
-                st.session_state.context_01 = content_01
-                st.session_state.context_02 = content_02
-                st.success('Context info update success!', icon="✅")   
+with st.expander("###### User Input Area"):
+    
+    if search_web_flag:
+        site, default_prompt, fix_prompt = QA.retrieve_speciality_plugin()
 
-    with tab2:
-        col1, col2 = st.columns([2,2])
-        with col1:
-            content_03 = st.text_area(upload_name1)
-        with col2:
-            if type(upload_name2) != float:
-                content_04 = st.text_area(upload_name2)
-            else:
-                content_04 = "nothing here"
-        if st.button("Apply",key='apply_02'):
-            if len(content_03) == 0:
-                st.warning('Please upload the context info', icon="⚠️")
-            else:
-                st.session_state.context_01 = content_03
-                st.session_state.context_02 = content_04
-                st.success('Context info update success!', icon="✅")           
+    else:    
+        tab1, tab2 = st.tabs(["📂pdf doc  ", "📄  txt"])
+        with tab1:      
+            col1, col2 = st.columns([2,2])
+            with col1:
+                if type(upload_name1) != float:
+                    content_01 = cv_upload(upload_name1)
+            
+            with col2:
+                if type(upload_name2) != float:
+                    content_02 = cv_upload(upload_name2)
+                else:
+                    content_02 = "nothing here"
+            if st.button("Apply", key='apply_01'):
+                if len(content_01) == 0:
+                    st.warning('Please upload the context info', icon="⚠️")
+                else:
+                    st.session_state.context_01 = content_01
+                    st.session_state.context_02 = content_02
+                    st.success('Context info update success!', icon="✅")   
+
+        with tab2:
+            col1, col2 = st.columns([2,2])
+            with col1:
+                content_03 = st.text_area(upload_name1)
+            with col2:
+                if type(upload_name2) != float:
+                    content_04 = st.text_area(upload_name2)
+                else:
+                    content_04 = "nothing here"
+            if st.button("Apply",key='apply_02'):
+                if len(content_03) == 0:
+                    st.warning('Please upload the context info', icon="⚠️")
+                else:
+                    st.session_state.context_01 = content_03
+                    st.session_state.context_02 = content_04
+                    st.success('Context info update success!', icon="✅")           
         
 #######################################################################
 #calling the langchain to run the model
@@ -216,35 +245,46 @@ if anthropic.api_key:
 
     if "Text_Expert" not in st.session_state:
         inputs =''
-        st.session_state.Text_Expert = Text_Expert(inputs, defult_prompt, temperature)
+        st.session_state.Text_Expert = Text_Expert(inputs, default_prompt, temperature)
         st.session_state.history = []      
  
     with st.sidebar:
         with st.expander("#### Modify Base Prompt"):
-            inputs = st.text_area("modify_base_prompt",st.session_state.Text_Expert._default_prompt(prompt_from_template=defult_prompt), label_visibility="hidden")
+            inputs = st.text_area("modify_base_prompt",st.session_state.Text_Expert._default_prompt(prompt_from_template=default_prompt), label_visibility="hidden")     
         with st.expander("#### Review Base Prompt:"):
             user_final_prompt = inputs+ "\n\n" + fix_prompt+max_token+language
             user_final_prompt
-            defult_prompt = defult_prompt + "\n\n" + fix_prompt+max_token+language
-            
-    st.session_state.Text_Expert = Text_Expert(user_final_prompt,defult_prompt, temperature)
+            default_prompt = default_prompt + "\n\n" + fix_prompt+max_token+language
+        with st.expander("#### User Question History"):
+            if 'human_data' not in locals():
+                human_data = list_to_string(reverse_list(extract_human_history(messages_to_dict(st.session_state.history))))
+            st.write(human_data)         
+    st.session_state.Text_Expert = Text_Expert(user_final_prompt,default_prompt, temperature)
 
     
     with st.sidebar:
-        if ("context_01" in st.session_state):
-            # create a text input widget for a question
+        if search_web_flag == True:
             question = st.text_area("##### Ask a question", label_visibility="visible")
-            # create a button to run the model
-            if st.button("Run"):
-                # run the model
-                bot_response = st.session_state.Text_Expert.run_chain(
-                    'English', st.session_state.context_01, 
-                        st.session_state.context_02, question)
-                # st.session_state.bot_response = bot_response
-                history.add_user_message(question)
-                history.add_ai_message(bot_response)
-                st.session_state.history +=history.messages
+            content_01 = QA.search_web(site, question)
+            content_02 = 'nothing here'
+            st.session_state.context_01 = content_01
+            st.session_state.context_02 = content_02
+        else:
+            if ("context_01" in st.session_state):
+                # create a text input widget for a question
+                question = st.text_area("##### Ask a question", label_visibility="visible")
+                # create a button to run the model
+        if st.button("Run"):
+            # run the model
+            bot_response = st.session_state.Text_Expert.run_chain(
+                'English', st.session_state.context_01, 
+                    st.session_state.context_02, question)
+            # st.session_state.bot_response = bot_response
+            history.add_user_message(question)
+            history.add_ai_message(bot_response)
+            st.session_state.history +=history.messages
         dicts = messages_to_dict(st.session_state.history)
+        human_data = extract_human_history(dicts)
         string_hist = extract_info(dicts)
         if len(string_hist) != 0:
             st.download_button('Download Chat History', string_hist,'history.txt')
