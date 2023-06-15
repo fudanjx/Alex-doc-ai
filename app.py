@@ -17,6 +17,7 @@ import anthropic
 import os
 import pandas as pd
 import app_QA_plugin as QA
+import add_logo as alex_logo
 
 ##################################################################################
 class Text_Expert:
@@ -176,6 +177,7 @@ search_web_flag = False
 ####################################################################
 #setup the sidebar section
 with st.sidebar:
+    alex_logo.add_sidebar_logo()
     # data_df_dase = pd.read_csv('prompt_template.csv')
     data_df_dase = pd.read_csv('https://www.dropbox.com/s/6v3ldwaoqe80iv0/prompt_template.csv?dl=1')
 
