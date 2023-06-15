@@ -7,7 +7,7 @@ def add_sidebar_logo():
 
         st.sidebar.markdown(
             f"""
-            <div style="display:table;margin-top:-14%;margin-left:-3%;">
+            <div style="display:table;margin-top:-20%;margin-left:-3%;">
                 <img src="data:image/png;base64,{data}" width="170" height="60">
             </div>
             """,
