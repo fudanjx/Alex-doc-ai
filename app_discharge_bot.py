@@ -86,6 +86,7 @@ def generate_individual_summary(source_df):
         my_bar.progress(percent_complete + each_run, text=progress_text)
         percent_complete += each_run
     st.success("Analysis completed!", icon="✅")
+    st.dataframe(source_df[['Bed', 'AI Results']])
     download_results_df = source_df[['Bed', 'AI Results']]
     return download_results_df
 
