@@ -12,12 +12,15 @@ from langchain.prompts.chat import (
 from langchain.schema import AIMessage, HumanMessage, SystemMessage
 from streamlit_callback import StreamlitCallbackHandler
 import streamlit as st
-import PyPDF2
+
 import anthropic
 import os
 import pandas as pd
 import app_QA_plugin as QA
+import app_discharge_bot as discharge_bot
 import add_logo as alex_logo
+import common_functions as cf
+
 
 ##################################################################################
 class Text_Expert:
@@ -64,60 +67,7 @@ class Text_Expert:
         )
     
 ################################################################################
-def retrieve_multi_pdf_text(pdf_files):
-    text = ""
-    for pdf_file in pdf_files:
-        pdf_reader = PyPDF2.PdfReader(pdf_file)
-        for page in pdf_reader.pages:
-            text += page.extract_text()  
-    return text
-
-def jd_upload(upload_name):
-    # create a upload file widget for a pdf
-    pdf_file_01 = st.file_uploader(upload_name, type=["pdf"], accept_multiple_files=True)
-
-    # if a pdf file is uploaded
-    if pdf_file_01:
-        return retrieve_multi_pdf_text(pdf_file_01) 
-    else:
-        return "" 
-
-def cv_upload(upload_name):
-    # create a upload file widget for a pdf
-    pdf_file_02 = st.file_uploader(upload_name, type=["pdf"], accept_multiple_files=True)
-
-   # if a pdf file is uploaded
-    if pdf_file_02:
-        return retrieve_multi_pdf_text(pdf_file_02)
-    else:
-        return ""  
-#extract the message history dict into a string         
-def extract_info(data):
-    result = ""
-    for item in data:
-        if item["type"] == "human":
-            result += 'Human: '+ item["data"]["content"] + " ; \n\n"
-        elif item["type"] == "ai":
-            result += 'AI: '+ item["data"]["content"] + "\n\n"
-    return result
-
-#extract the message dict of human input portion history into a list        
-def extract_human_history(data):
-    human_data = []
-    for d in data:
-        if d['type'] == 'human':
-            human_data.append(d['data']['content'])
-    return human_data
-
-# Define a function that takes a list as input and returns the reversed list
-def reverse_list(lst):
-    return lst[::-1]
-
-# Convert the list to a string, and add line break after each list item
-def list_to_string(lst):
-    return '\n\n'.join(str(i+1) + '. ' + str(item) for i, item in enumerate(lst))
-
-####################################################################################        
+     
 st.set_page_config(page_title="Bot Alex!",page_icon="👀")    
 # emojis: https://www.webfx.com/tools/emoji-cheat-sheet/    
 # create a streamlit app
@@ -173,7 +123,7 @@ with st.expander("###### AI Model Setup"):
 
 history = ChatMessageHistory()
 search_web_flag = False
-
+discharge_bot_flag = False
 ####################################################################
 #setup the sidebar section
 with st.sidebar:
@@ -191,7 +141,9 @@ with st.sidebar:
     
     if option == 'Ask Anything!':
         search_web_flag = True
-
+        
+    if option == 'Long Stayer Analyzer':
+        discharge_bot_flag = True
     else: 
         default_prompt = df_selection['prompt'].values[0]
         fix_prompt = df_selection['fix_prompt'].values[0]
@@ -203,6 +155,11 @@ with st.expander("###### User Input Area"):
     
     if search_web_flag:
         site, default_prompt, fix_prompt = QA.retrieve_speciality_plugin()
+        
+    elif discharge_bot_flag:
+        # Upload Patient Notes  
+        notes_df = discharge_bot.upload_patient_notes()
+        # Analyze the long stayer
 
     else:    
         tab1, tab2 = st.tabs(["📂pdf doc  ", "📄  txt"])
@@ -210,11 +167,11 @@ with st.expander("###### User Input Area"):
             col1, col2 = st.columns([2,2])
             with col1:
                 if type(upload_name1) != float:
-                    content_01 = cv_upload(upload_name1)
+                    content_01 = cf.cv_upload(upload_name1)
             
             with col2:
                 if type(upload_name2) != float:
-                    content_02 = cv_upload(upload_name2)
+                    content_02 = cf.cv_upload(upload_name2)
                 else:
                     content_02 = "nothing here"
             if st.button("Apply", key='apply_01'):
@@ -228,7 +185,10 @@ with st.expander("###### User Input Area"):
         with tab2:
             col1, col2 = st.columns([2,2])
             with col1:
-                content_03 = st.text_area(upload_name1)
+                if type(upload_name1) != float:
+                    content_03 = st.text_area(upload_name1)
+                else:
+                    content_03 = "nothing here"
             with col2:
                 if type(upload_name2) != float:
                     content_04 = st.text_area(upload_name2)
@@ -244,55 +204,66 @@ with st.expander("###### User Input Area"):
         
 #######################################################################
 #calling the langchain to run the model
-if anthropic.api_key:
-
-    if "Text_Expert" not in st.session_state:
-        inputs =''
-        st.session_state.Text_Expert = Text_Expert(inputs, default_prompt, temperature)
-        st.session_state.history = []      
- 
-    with st.sidebar:
-        with st.expander("#### Modify Base Prompt"):
-            inputs = st.text_area("modify_base_prompt",st.session_state.Text_Expert._default_prompt(prompt_from_template=default_prompt), label_visibility="hidden")     
-        with st.expander("#### Review Base Prompt:"):
-            user_final_prompt = inputs+ "\n\n" + fix_prompt+max_token+language
-            user_final_prompt
-            default_prompt = default_prompt + "\n\n" + fix_prompt+max_token+language
-        with st.expander("#### User Question History"):
-            if 'human_data' not in locals():
-                human_data = list_to_string(reverse_list(extract_human_history(messages_to_dict(st.session_state.history))))
-            st.write(human_data)         
-    st.session_state.Text_Expert = Text_Expert(user_final_prompt,default_prompt, temperature)
-
-    
-    with st.sidebar:
-        if search_web_flag == True:
-            question = st.text_area("##### Ask a question", label_visibility="visible")
-            content_01 = QA.search_web(site, question)
-            content_02 = 'nothing here'
-            st.session_state.context_01 = content_01
-            st.session_state.context_02 = content_02
-        else:
-            if ("context_01" in st.session_state):
-                # create a text input widget for a question
-                question = st.text_area("##### Ask a question", label_visibility="visible")
-                # create a button to run the model
-        if st.button("Run"):
-            # run the model
-            bot_response = st.session_state.Text_Expert.run_chain(
-                'English', st.session_state.context_01, 
-                    st.session_state.context_02, question)
-            # st.session_state.bot_response = bot_response
-            history.add_user_message(question)
-            history.add_ai_message(bot_response)
-            st.session_state.history +=history.messages
-        dicts = messages_to_dict(st.session_state.history)
-        human_data = extract_human_history(dicts)
-        string_hist = extract_info(dicts)
-        if len(string_hist) != 0:
-            st.download_button('Download Chat History', string_hist,'history.txt')
-        else:
-            pass
-
+if discharge_bot_flag:
+    if type(notes_df)!= int:
+        if st.button("Analyze"):
+            # Analyze and generat the consolidated summary
+            st.write(discharge_bot.generate_summary(notes_df))
+            # Analyze and generate the individual summary in data frame
+            individual_result_df =discharge_bot.generate_individual_summary(notes_df)
+            st.dataframe(individual_result_df)
+            discharge_bot.download_button(individual_result_df)
+            
 else:
-    pass
+    if anthropic.api_key:
+
+        if "Text_Expert" not in st.session_state:
+            inputs =''
+            st.session_state.Text_Expert = Text_Expert(inputs, default_prompt, temperature)
+            st.session_state.history = []      
+    
+        with st.sidebar:
+            with st.expander("#### Modify Base Prompt"):
+                inputs = st.text_area("modify_base_prompt",st.session_state.Text_Expert._default_prompt(prompt_from_template=default_prompt), label_visibility="hidden")     
+            with st.expander("#### Review Base Prompt:"):
+                user_final_prompt = inputs+ "\n\n" + fix_prompt+max_token+language
+                user_final_prompt
+                default_prompt = default_prompt + "\n\n" + fix_prompt+max_token+language
+            with st.expander("#### User Question History"):
+                if 'human_data' not in locals():
+                    human_data = cf.list_to_string(cf.reverse_list(cf.extract_human_history(messages_to_dict(st.session_state.history))))
+                st.write(human_data)         
+        st.session_state.Text_Expert = Text_Expert(user_final_prompt,default_prompt, temperature)
+
+        
+        with st.sidebar:
+            if search_web_flag == True:
+                question = st.text_area("##### Ask a question", label_visibility="visible")
+                content_01 = QA.search_web(site, question)
+                content_02 = 'nothing here'
+                st.session_state.context_01 = content_01
+                st.session_state.context_02 = content_02
+            else:
+                if ("context_01" in st.session_state):
+                    # create a text input widget for a question
+                    question = st.text_area("##### Ask a question", label_visibility="visible")
+                    # create a button to run the model
+            if st.button("Run"):
+                # run the model
+                bot_response = st.session_state.Text_Expert.run_chain(
+                    'English', st.session_state.context_01, 
+                        st.session_state.context_02, question)
+                # st.session_state.bot_response = bot_response
+                history.add_user_message(question)
+                history.add_ai_message(bot_response)
+                st.session_state.history +=history.messages
+            dicts = messages_to_dict(st.session_state.history)
+            human_data = cf.extract_human_history(dicts)
+            string_hist = cf.extract_info(dicts)
+            if len(string_hist) != 0:
+                st.download_button('Download Chat History', string_hist,'history.txt')
+            else:
+                pass
+
+    else:
+        pass
