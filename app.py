@@ -97,14 +97,14 @@ with st.expander("###### AI Model Setup"):
     with col2:  
         length = st.select_slider(
         'Length of the answer📏',
-        options=['short', 'medium', 'long', 'extreme_long'])
+        options=['short', 'medium', 'long', 'very long'])
         if length == 'short':
             max_token = "\n\n Please try to answer within 200 words \n"
         if length == 'medium':
             max_token = "\n\n Please try to answer within 500 words \n"
         if length == 'long':
             max_token = "\n\n Please try to answer within 1000 words \n"
-        if length == 'extreme_long':
+        if length == 'very long':
             max_token = "\n\n Please try to answer within 4000 words \n"
 
         lang = st.selectbox('Language Preference 🗣',
