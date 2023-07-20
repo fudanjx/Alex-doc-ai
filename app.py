@@ -22,7 +22,7 @@ import os
 import pandas as pd
 import app_QA_plugin as QA
 import app_discharge_bot as discharge_bot
-import app_convo_retrieval_QA as retrieval_QA
+import app_retrieval_QA as retrieval_QA
 import add_logo as alex_logo
 import common_functions as cf
 import Text_Expert
