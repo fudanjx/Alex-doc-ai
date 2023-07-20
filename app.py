@@ -10,6 +10,10 @@ from langchain.prompts.chat import (
     HumanMessagePromptTemplate,
 )
 from langchain.schema import AIMessage, HumanMessage, SystemMessage
+from langchain.vectorstores import FAISS
+from langchain.memory import ConversationBufferWindowMemory
+from langchain.chains import ConversationalRetrievalChain
+from langchain.embeddings import HuggingFaceEmbeddings
 from streamlit_callback import StreamlitCallbackHandler
 import streamlit as st
 
@@ -18,9 +22,13 @@ import os
 import pandas as pd
 import app_QA_plugin as QA
 import app_discharge_bot as discharge_bot
+import app_convo_retrieval_QA as retrieval_QA
 import add_logo as alex_logo
 import common_functions as cf
-     
+import Text_Expert
+
+###################################################################
+
 st.set_page_config(page_title="Bot Alex!",page_icon="👀")    
 # emojis: https://www.webfx.com/tools/emoji-cheat-sheet/    
 # create a streamlit app
@@ -99,8 +107,14 @@ with st.sidebar:
     if option == 'Ask Anything!':
         search_web_flag = True
         
-    if option == 'Long Stayer Analyzer':
+    elif option == 'Long Stayer Analyzer':
         discharge_bot_flag = True
+
+    elif option == 'Finance HR Procurement QA':
+        fin_hr_pcm_flag = True
+        default_prompt = df_selection['prompt'].values[0]
+        fix_prompt = df_selection['fix_prompt'].values[0]
+    
     else: 
         default_prompt = df_selection['prompt'].values[0]
         fix_prompt = df_selection['fix_prompt'].values[0]
@@ -118,6 +132,10 @@ with st.expander("###### User Content Input Area"):
         notes_df = discharge_bot.upload_patient_notes()
         # Analyze the long stayer
 
+    elif fin_hr_pcm_flag:
+        # Pull embedding type & Finance HR & Procurement VectorStore Index
+        embedding, vectorstore, fix_prompt = retrieval_QA.retrieve_fin_hr_pcm_index()
+    
     else:    
         tab1, tab2 = st.tabs(["📄 txt  ", "  📂pdf doc  "])
         with tab2:      
@@ -200,16 +218,23 @@ else:
                 content_02 = 'nothing here'
                 st.session_state.context_01 = content_01
                 st.session_state.context_02 = content_02
+            elif fin_hr_pcm_flag == True:
+                question = st.text_area("##### Ask a question", label_visibility="visible")
             else:
                 if ("context_01" in st.session_state):
                     # create a text input widget for a question
                     question = st.text_area("##### Human Instruction to AI", label_visibility="visible")
                     # create a button to run the model
             if st.button("Run"):
-                # run the model
-                bot_response = st.session_state.Text_Expert.run_chain(
-                    'English', st.session_state.context_01, 
-                        st.session_state.context_02, question)
+                if fin_hr_pcm_flag == True:
+                    bot_response, reference_docs = st.session_state.Text_Expert.run_qa_retrieval_chain(question, vectorstore)
+                    reference_docs = retrieval_QA.display_reference(reference_docs)
+                    bot_response += reference_docs
+                else:
+                    # run the model
+                    bot_response = st.session_state.Text_Expert.run_chain(
+                        'English', st.session_state.context_01, 
+                            st.session_state.context_02, question)
                 # st.session_state.bot_response = bot_response
                 history.add_user_message(question)
                 history.add_ai_message(bot_response)
