@@ -20,53 +20,6 @@ import app_QA_plugin as QA
 import app_discharge_bot as discharge_bot
 import add_logo as alex_logo
 import common_functions as cf
-
-
-##################################################################################
-class Text_Expert:
-    def __init__(self, inputs, prompt_from_template, temperture):
-               
-        self.system_prompt = self.get_system_prompt(inputs, prompt_from_template)
-
-        self.user_prompt = HumanMessagePromptTemplate.from_template("{user_question}")
-
-        full_prompt_template = ChatPromptTemplate.from_messages(
-            [self.system_prompt, self.user_prompt]
-        )
-
-        self.chat = ChatAnthropic(model='claude-v1-100k', temperature =temperture, max_tokens_to_sample=1024, streaming=True, callbacks=[StreamlitCallbackHandler()])
-
-        self.chain = LLMChain(llm=self.chat, prompt=full_prompt_template)
-        
-        # st.write(full_prompt_template)
-        
-        # st.write("context01: ", st.session_state.context_01)  
-        
-        # st.write("context02: ", st.session_state.context_02)  
-             
-    def get_system_prompt(self, inputs, prompt_from_template):
-        if self._default_prompt(prompt_from_template) != self._user_modified_prompt(inputs):
-            system_prompt = self._user_modified_prompt(inputs)
-        else:
-            system_prompt = self._default_prompt(prompt_from_template)
-        system_prompt = '"""' + system_prompt+ '"""'
-        return SystemMessagePromptTemplate.from_template(system_prompt)
-    
-    def _user_modified_prompt(self, inputs):
-        user_modified_prompt=inputs
-        return user_modified_prompt
-    
-    def _default_prompt(self, prompt_from_template):
-        default_prompt = prompt_from_template
-          
-        return default_prompt
-        
-    def run_chain(self, language, context_01, context_02, question):
-        return self.chain.run(
-            language=language, context_01 = context_01 , context_02 =context_02, user_question=question
-        )
-    
-################################################################################
      
 st.set_page_config(page_title="Bot Alex!",page_icon="👀")    
 # emojis: https://www.webfx.com/tools/emoji-cheat-sheet/    
@@ -126,6 +79,8 @@ with st.expander("###### AI Model Setup"):
 history = ChatMessageHistory()
 search_web_flag = False
 discharge_bot_flag = False
+fin_hr_pcm_flag = False
+vectorstore = None
 ####################################################################
 #setup the sidebar section
 with st.sidebar:
