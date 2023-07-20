@@ -25,7 +25,7 @@ import app_discharge_bot as discharge_bot
 import app_retrieval_QA as retrieval_QA
 import add_logo as alex_logo
 import common_functions as cf
-import Text_Expert
+import text_expert as Text_Expert
 
 ###################################################################
 
