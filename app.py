@@ -49,7 +49,7 @@ with st.expander("###### AI Model Setup"):
         "Style of the answer 👇",
         ('Deterministic', 'Balanced', 'Creative'))
         if style == 'Deterministic':
-            temperature = 0.1
+            temperature = 0.0
         if style == 'Balanced':
             temperature = 0.4
         if style == 'Creative':
