@@ -6,8 +6,8 @@ import streamlit as st
 
 def retrieve_fin_hr_pcm_index():
     embedding=HuggingFaceEmbeddings(model_name="all-MiniLM-L6-v2")
-    folder_path="/Users/tammyauyong/Documents/Projects/OpenAI/Finance_HR_Procurement_faiss"
-    #folder_path="https://www.dropbox.com/sh/o9tfhuad8uwqh4u/AAC-kEoP07FWzpI7PaVavcmka?dl=0"
+    folder_path="Finance_HR_Procurement_faiss"
+    #download_path="https://www.dropbox.com/sh/o9tfhuad8uwqh4u/AAC-kEoP07FWzpI7PaVavcmka?dl=0"
     vectorstore = FAISS.load_local(
         folder_path=folder_path, embeddings=embedding,
         index_name="fin_hr_procurement_HuggingFace"
