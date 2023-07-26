@@ -57,12 +57,12 @@ class Text_Expert:
         )
     
     def run_qa_retrieval_chain(self, question, vectorstore):
-        memory = ConversationBufferWindowMemory(k=5,memory_key='chat_history', return_messages=False, output_key='answer')
+        memory = ConversationBufferWindowMemory(k=5,memory_key='chat_history', return_messages=True, output_key='answer')
         retriever = vectorstore.as_retriever(search_type="similarity", search_kwargs={"k": 12})
         qa_retrieval_chain = ConversationalRetrievalChain.from_llm(
             llm=self.chat, retriever=retriever, memory=memory, return_source_documents=True
             )
-        result = qa_retrieval_chain(question)
+        result = qa_retrieval_chain({"question":question})
         reference_docs = []
         for doc in result['source_documents'][0:5]:
             if doc.metadata['source'] not in reference_docs:
