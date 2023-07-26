@@ -12,8 +12,7 @@ def retrieve_fin_hr_pcm_index():
         folder_path=folder_path, embeddings=embedding,
         index_name="fin_hr_procurement_HuggingFace"
         )
-    fix_prompt = ""
-    return embedding, vectorstore, fix_prompt
+    return embedding, vectorstore
 
 
 def display_reference(reference_docs):
