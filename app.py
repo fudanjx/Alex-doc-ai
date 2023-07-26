@@ -25,7 +25,7 @@ import app_discharge_bot as discharge_bot
 import app_retrieval_QA as retrieval_QA
 import add_logo as alex_logo
 import common_functions as cf
-import text_expert as Text_Expert
+import text_expert as te
 
 ###################################################################
 
@@ -134,7 +134,7 @@ with st.expander("###### User Content Input Area"):
 
     elif fin_hr_pcm_flag:
         # Pull embedding type & Finance HR & Procurement VectorStore Index
-        embedding, vectorstore, fix_prompt = retrieval_QA.retrieve_fin_hr_pcm_index()
+        embedding, vectorstore = retrieval_QA.retrieve_fin_hr_pcm_index()
     
     else:    
         tab1, tab2 = st.tabs(["📄 txt  ", "  📂pdf doc  "])
@@ -194,7 +194,7 @@ else:
 
         if "Text_Expert" not in st.session_state:
             inputs =''
-            st.session_state.Text_Expert = Text_Expert(inputs, default_prompt, temperature)
+            st.session_state.Text_Expert = te.Text_Expert(inputs, default_prompt, temperature)
             st.session_state.history = []      
     
         with st.sidebar:
@@ -208,7 +208,7 @@ else:
                 if 'human_data' not in locals():
                     human_data = cf.list_to_string(cf.reverse_list(cf.extract_human_history(messages_to_dict(st.session_state.history))))
                 st.write(human_data)         
-        st.session_state.Text_Expert = Text_Expert(user_final_prompt,default_prompt, temperature)
+        st.session_state.Text_Expert = te.Text_Expert(user_final_prompt,default_prompt, temperature)
 
         
         with st.sidebar:
