@@ -1,73 +1,20 @@
-from langchain.chat_models import ChatAnthropic
 from langchain.memory import ChatMessageHistory
 from langchain.schema import messages_from_dict, messages_to_dict
-from langchain import LLMChain
-from langchain import ConversationChain
-from langchain.prompts.chat import (
-    ChatPromptTemplate,
-    SystemMessagePromptTemplate,
-    AIMessagePromptTemplate,
-    HumanMessagePromptTemplate,
-)
 from langchain.schema import AIMessage, HumanMessage, SystemMessage
-from streamlit_callback import StreamlitCallbackHandler
-import streamlit as st
 
+import streamlit as st
 import anthropic
 import os
 import pandas as pd
 import app_QA_plugin as QA
 import app_discharge_bot as discharge_bot
+import app_retrieval_QA as retrieval_QA
 import add_logo as alex_logo
 import common_functions as cf
+import text_expert as te
 
+###################################################################
 
-##################################################################################
-class Text_Expert:
-    def __init__(self, inputs, prompt_from_template, temperture):
-               
-        self.system_prompt = self.get_system_prompt(inputs, prompt_from_template)
-
-        self.user_prompt = HumanMessagePromptTemplate.from_template("{user_question}")
-
-        full_prompt_template = ChatPromptTemplate.from_messages(
-            [self.system_prompt, self.user_prompt]
-        )
-
-        self.chat = ChatAnthropic(model='claude-v1-100k', temperature =temperture, max_tokens_to_sample=1024, streaming=True, callbacks=[StreamlitCallbackHandler()])
-
-        self.chain = LLMChain(llm=self.chat, prompt=full_prompt_template)
-        
-        # st.write(full_prompt_template)
-        
-        # st.write("context01: ", st.session_state.context_01)  
-        
-        # st.write("context02: ", st.session_state.context_02)  
-             
-    def get_system_prompt(self, inputs, prompt_from_template):
-        if self._default_prompt(prompt_from_template) != self._user_modified_prompt(inputs):
-            system_prompt = self._user_modified_prompt(inputs)
-        else:
-            system_prompt = self._default_prompt(prompt_from_template)
-        system_prompt = '"""' + system_prompt+ '"""'
-        return SystemMessagePromptTemplate.from_template(system_prompt)
-    
-    def _user_modified_prompt(self, inputs):
-        user_modified_prompt=inputs
-        return user_modified_prompt
-    
-    def _default_prompt(self, prompt_from_template):
-        default_prompt = prompt_from_template
-          
-        return default_prompt
-        
-    def run_chain(self, language, context_01, context_02, question):
-        return self.chain.run(
-            language=language, context_01 = context_01 , context_02 =context_02, user_question=question
-        )
-    
-################################################################################
-     
 st.set_page_config(page_title="Bot Alex!",page_icon="👀")    
 # emojis: https://www.webfx.com/tools/emoji-cheat-sheet/    
 # create a streamlit app
@@ -88,7 +35,7 @@ with st.expander("###### AI Model Setup"):
         "Style of the answer 👇",
         ('Deterministic', 'Balanced', 'Creative'))
         if style == 'Deterministic':
-            temperature = 0.1
+            temperature = 0.0
         if style == 'Balanced':
             temperature = 0.4
         if style == 'Creative':
@@ -126,6 +73,8 @@ with st.expander("###### AI Model Setup"):
 history = ChatMessageHistory()
 search_web_flag = False
 discharge_bot_flag = False
+fin_hr_pcm_flag = False
+vectorstore = None
 ####################################################################
 #setup the sidebar section
 with st.sidebar:
@@ -144,8 +93,14 @@ with st.sidebar:
     if option == 'Ask Anything!':
         search_web_flag = True
         
-    if option == 'Long Stayer Analyzer':
+    elif option == 'Long Stayer Analyzer':
         discharge_bot_flag = True
+
+    elif option == 'Finance HR Procurement QA':
+        fin_hr_pcm_flag = True
+        default_prompt = df_selection['prompt'].values[0]
+        fix_prompt = df_selection['fix_prompt'].values[0]
+    
     else: 
         default_prompt = df_selection['prompt'].values[0]
         fix_prompt = df_selection['fix_prompt'].values[0]
@@ -163,6 +118,10 @@ with st.expander("###### User Content Input Area"):
         notes_df = discharge_bot.upload_patient_notes()
         # Analyze the long stayer
 
+    elif fin_hr_pcm_flag:
+        # Pull embedding type & Finance HR & Procurement VectorStore Index
+        embedding, vectorstore = retrieval_QA.retrieve_fin_hr_pcm_index()
+    
     else:    
         tab1, tab2 = st.tabs(["📄 txt  ", "  📂pdf doc  "])
         with tab2:      
@@ -221,7 +180,7 @@ else:
 
         if "Text_Expert" not in st.session_state:
             inputs =''
-            st.session_state.Text_Expert = Text_Expert(inputs, default_prompt, temperature)
+            st.session_state.Text_Expert = te.Text_Expert(inputs, default_prompt, temperature)
             st.session_state.history = []      
     
         with st.sidebar:
@@ -235,7 +194,7 @@ else:
                 if 'human_data' not in locals():
                     human_data = cf.list_to_string(cf.reverse_list(cf.extract_human_history(messages_to_dict(st.session_state.history))))
                 st.write(human_data)         
-        st.session_state.Text_Expert = Text_Expert(user_final_prompt,default_prompt, temperature)
+        st.session_state.Text_Expert = te.Text_Expert(user_final_prompt,default_prompt, temperature)
 
         
         with st.sidebar:
@@ -245,16 +204,23 @@ else:
                 content_02 = 'nothing here'
                 st.session_state.context_01 = content_01
                 st.session_state.context_02 = content_02
+            elif fin_hr_pcm_flag == True:
+                question = st.text_area("##### Ask a question", label_visibility="visible")
             else:
                 if ("context_01" in st.session_state):
                     # create a text input widget for a question
                     question = st.text_area("##### Human Instruction to AI", label_visibility="visible")
                     # create a button to run the model
             if st.button("Run"):
-                # run the model
-                bot_response = st.session_state.Text_Expert.run_chain(
-                    'English', st.session_state.context_01, 
-                        st.session_state.context_02, question)
+                if fin_hr_pcm_flag == True:
+                    bot_response, reference_docs = st.session_state.Text_Expert.run_qa_retrieval_chain(question, vectorstore)
+                    reference_docs = retrieval_QA.display_reference(reference_docs)
+                    bot_response += reference_docs
+                else:
+                    # run the model
+                    bot_response = st.session_state.Text_Expert.run_chain(
+                        'English', st.session_state.context_01, 
+                            st.session_state.context_02, question)
                 # st.session_state.bot_response = bot_response
                 history.add_user_message(question)
                 history.add_ai_message(bot_response)
