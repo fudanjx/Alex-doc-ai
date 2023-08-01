@@ -21,9 +21,14 @@ st.set_page_config(page_title="Bot Alex!",page_icon="👀")
 st.title("🔎Bot Alex ")
 st.write("##### - Your Personal Work Assistant")
 with st.expander("###### Instructions"):
-    st.info ("Capable of analyzing any document.  You may refresh the page to start over", icon="ℹ️")
-    st.warning("All the information in the conversation will be vanished after you close the session.", icon="⚠️") 
-    st.info("You can download the chat history at the end of the conversation", icon="ℹ️")
+    st.info ("1. In 'AI Model setup', enter the provided API key and set the preferred style, length, and language for the answer",  icon="ℹ️")
+    st.info ("2. After successful model setup, select your Use Case from the left sidebar", icon="ℹ️")
+    st.info ("3. Paste or upload relevant information into the 'User Content Input Area", icon="ℹ️")
+    st.info ("4. Enter instructions for the AI in the 'Human Instruction to AI' box in the left sidebar. This can be left blank for the first run", icon="ℹ️")
+    st.info ("Should any errors occur, please refresh the page to restart the process", icon="ℹ️")
+    st.info ("You can download the chat history at the end of the conversation", icon="ℹ️")
+    st.warning("All the information in the conversation will be vanished after you close the session or refresh the page.", icon="⚠️") 
+    
     # st.snow()
     
 with st.expander("###### AI Model Setup"):
