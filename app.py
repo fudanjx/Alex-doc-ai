@@ -95,7 +95,7 @@ with st.sidebar:
           
     df_selection = data_df_dase[data_df_dase['prompt_category'] == option]
     
-    if option == 'Ask Anything!':
+    if option == 'Internet Genius':
         search_web_flag = True
         
     elif option == 'Long Stayer Analyzer':
