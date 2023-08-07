@@ -105,6 +105,8 @@ with st.sidebar:
         fin_hr_pcm_flag = True
         default_prompt = df_selection['prompt'].values[0]
         fix_prompt = df_selection['fix_prompt'].values[0]
+        upload_name1 = df_selection['Doc_01'].values[0]
+        upload_name2 = df_selection['Doc_02'].values[0]
     
     else: 
         default_prompt = df_selection['prompt'].values[0]
@@ -126,6 +128,15 @@ with st.expander("###### User Content Input Area"):
     elif fin_hr_pcm_flag:
         # Pull embedding type & Finance HR & Procurement VectorStore Index
         embedding, vectorstore = retrieval_QA.retrieve_fin_hr_pcm_index()
+        # Upload Documents for review
+        tab1 = st.tabs([" 📄word / 📂pdf / 📊excel "])
+        content_01 = retrieval_QA.upload_documents()
+        if st.button("Apply", key='apply_03'):
+            if len(content_01) == 0:
+                st.warning('Please upload extra context info if required', icon="⚠️")
+            else:
+                st.session_state.context_01 = content_01
+                st.success('Context info update success!', icon="✅")
     
     else:    
         tab1, tab2 = st.tabs(["📄 txt  ", "  📂pdf doc  "])
@@ -211,6 +222,9 @@ else:
                 st.session_state.context_02 = content_02
             elif fin_hr_pcm_flag == True:
                 question = st.text_area("##### Ask a question", label_visibility="visible")
+                st.session_state.context_01 = content_01
+                if st.button("Clear Chat Memory"):
+                    st.session_state.memory = retrieval_QA.retrieve_conversation_memory()
             else:
                 if ("context_01" in st.session_state):
                     # create a text input widget for a question
@@ -218,7 +232,10 @@ else:
                     # create a button to run the model
             if st.button("Run"):
                 if fin_hr_pcm_flag == True:
-                    bot_response, reference_docs = st.session_state.Text_Expert.run_qa_retrieval_chain(question, vectorstore)
+                    if ('memory' not in st.session_state):
+                        st.session_state.memory = retrieval_QA.retrieve_conversation_memory()
+                    bot_response, reference_docs = st.session_state.Text_Expert.run_qa_retrieval_chain(question,st.session_state.context_01,
+                                                                                                       vectorstore,st.session_state.memory)
                     reference_docs = retrieval_QA.display_reference(reference_docs)
                     bot_response += reference_docs
                 else:
