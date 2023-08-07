@@ -1,6 +1,8 @@
 import PyPDF2
 import streamlit as st
-
+import pandas as pd
+import json
+import docx
 
 ####################################################################################  
 def retrieve_multi_pdf_text(pdf_files):
@@ -9,6 +11,32 @@ def retrieve_multi_pdf_text(pdf_files):
         pdf_reader = PyPDF2.PdfReader(pdf_file)
         for page in pdf_reader.pages:
             text += page.extract_text()  
+    return text
+
+def retrieve_multi_excel_text(excel_files):
+    text = {}
+    for excel_file in excel_files:
+        if excel_file.endswith(('.csv','.xml')):
+            df_data = pd.read_csv(excel_file)
+            json_text = json.loads(df_data.to_json(orient="records"))
+            text["Sheet1"]= json_text
+            sheet_name = ''
+        else:
+            df_all_sheets = pd.ExcelFile(excel_file)
+            count=0
+            for sheet_name in list(df_all_sheets.sheet_names):
+                df_data = pd.read_excel(excel_file, sheet_name=sheet_name)
+                json_text = json.loads(df_data.to_json(orient="records"))
+                text[sheet_name]= json_text
+                count+=1
+    return json.dumps(text)
+
+def retrieve_multi_docx_text(word_files):
+    text = ""
+    for word_file in word_files:
+        doc = docx.Document(word_file)
+        for para in doc.paragraphs:
+            text+=f"\n{para.text}"
     return text
 
 def jd_upload(upload_name):
