@@ -28,7 +28,7 @@ def display_reference(reference_docs):
 
 def retrieve_conversation_memory():
     memory = ConversationBufferMemory(
-        memory_key='chat_history', input_key="context_01", return_messages=True, output_key='answer'
+        memory_key='chat_history', input_key="question", return_messages=True, output_key='answer'
         )
     return memory
 
