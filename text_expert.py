@@ -6,7 +6,7 @@ from langchain.prompts.chat import (
     HumanMessagePromptTemplate,
 )
 from langchain.vectorstores import FAISS
-from langchain.memory import ConversationBufferWindowMemory
+from langchain.memory import ConversationBufferMemory
 from langchain.chains import ConversationalRetrievalChain
 from langchain.embeddings import HuggingFaceEmbeddings
 from langchain import LLMChain
@@ -56,13 +56,30 @@ class Text_Expert:
             language=language, context_01 = context_01 , context_02 =context_02, user_question=question
         )
     
-    def run_qa_retrieval_chain(self, question, vectorstore):
-        memory = ConversationBufferWindowMemory(k=5,memory_key='chat_history', return_messages=True, output_key='answer')
-        retriever = vectorstore.as_retriever(search_type="similarity", search_kwargs={"k": 12})
+    def run_qa_retrieval_chain(self, question, context_01, vectorstore, memory):
+        retriever = vectorstore.as_retriever(search_type="similarity", search_kwargs={"k": 5})
+        question_prompt = ChatPromptTemplate.from_messages(
+            [HumanMessagePromptTemplate.from_template(
+                """Combine the chat history and follow up question into a standalone question.
+                Chat History: {chat_history}
+                Follow up question: {question}""")
+             ])
         qa_retrieval_chain = ConversationalRetrievalChain.from_llm(
-            llm=self.chat, retriever=retriever, memory=memory, return_source_documents=True
-            )
-        result = qa_retrieval_chain({"question":question})
+            llm=self.chat, retriever=retriever, memory=memory, return_source_documents=True, verbose=False
+            ,condense_question_prompt = question_prompt
+            ,condense_question_llm=ChatAnthropic(model='claude-v1-100k', temperature=0.2,max_tokens_to_sample=1024, streaming=False)
+            ,combine_docs_chain_kwargs={
+                "prompt": ChatPromptTemplate.from_messages(
+                    [self.system_prompt, 
+                     HumanMessagePromptTemplate.from_template(
+                         """Question: {question}
+                         =========
+                         {context}
+                         =========
+                         Answer:""")
+                    ]
+                )})
+        result = qa_retrieval_chain({'question':question,"context_01": context_01}, return_only_outputs=True)
         reference_docs = []
         for doc in result['source_documents'][0:5]:
             if doc.metadata['source'] not in reference_docs:
