@@ -6,4 +6,4 @@ pandas
 duckduckgo_search
 sentence_transformers
 faiss-cpu
-docx
+python-docx
