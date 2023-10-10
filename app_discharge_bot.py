@@ -56,23 +56,20 @@ def _generate_summary_prompt(anonymized_notes_agg):
     return prompt_summary
     
 
-def _read_and_aggregate (result_df):
-    result_df ["Combined_Field"] = "PATINET-" + result_df["Bed"] + ":" + result_df["AI Results"]
+def _read_and_aggregate (source_df):
+    source_df ["Combined_Field"] = "PATINET-" + source_df["Bed"] + ":" + source_df["Anonymized_NOTE_TEXT"]
     #create a new string by joining all the values from column "Combined_Field" with a colon
-    result_note_consolidated = " ".join(result_df["Combined_Field"])
+    result_note_consolidated = " ".join(source_df["Combined_Field"])
     return result_note_consolidated
 
-def generate_summary(result_df):
-    with st.spinner('Generating the consolidated summary ...'):
-        result_note_agg = _read_and_aggregate(result_df)
-        prompt = _generate_summary_prompt(result_note_agg)
-        executive_Summary= claude(prompt)   
-    st.success('Consolidated summary done:',icon="✅")
-    st.write(executive_Summary)
+def generate_summary(source_df):
+    result_note_agg = _read_and_aggregate(source_df)
+    prompt = _generate_summary_prompt(result_note_agg)
+    executive_Summary= claude(prompt)
     return executive_Summary
 
 def generate_individual_summary(source_df):
-    progress_text = "Analyzing individual records, Please wait..."
+    progress_text = "Analyzing in progress. Please wait."
     my_bar = st.progress(0, text=progress_text)
     counter = len(source_df)
     each_run = 1/counter
@@ -84,11 +81,11 @@ def generate_individual_summary(source_df):
         # Call Anthropic_API.claude() with the generated prompt
         response = claude(generated_prompt)    
         # Store the response in the 'AI Results' column
-        source_df.at[index, 'AI Results'] = response.lstrip()
+        source_df.at[index, 'AI Results'] = response
         # subset_df = result_note[["Bed", "AI Results"]]
         my_bar.progress(percent_complete + each_run, text=progress_text)
         percent_complete += each_run
-    st.success("Individual records analysis done:", icon="✅")
+    st.success("Analysis completed!", icon="✅")
     st.dataframe(source_df[['Bed', 'AI Results']])
     download_results_df = source_df[['Bed', 'AI Results']]
     return download_results_df

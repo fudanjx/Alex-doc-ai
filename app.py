@@ -115,7 +115,7 @@ with st.sidebar:
         upload_name2 = df_selection['Doc_02'].values[0]
 ###################################################################
 #setup the context input section
-with st.expander("###### User Content Input Area"):
+with st.expander("###### User Input Area"):
     
     if search_web_flag:
         site, default_prompt, fix_prompt = QA.retrieve_speciality_plugin()
@@ -139,8 +139,8 @@ with st.expander("###### User Content Input Area"):
                 st.success('Context info update success!', icon="✅")
     
     else:    
-        tab1, tab2 = st.tabs(["📄 txt  ", "  📂pdf doc  "])
-        with tab2:      
+        tab1, tab2 = st.tabs(["📂pdf doc  ", "📄  txt"])
+        with tab1:      
             col1, col2 = st.columns([2,2])
             with col1:
                 if type(upload_name1) != float:
@@ -159,7 +159,7 @@ with st.expander("###### User Content Input Area"):
                     st.session_state.context_02 = content_02
                     st.success('Context info update success!', icon="✅")   
 
-        with tab1:
+        with tab2:
             col1, col2 = st.columns([2,2])
             with col1:
                 if type(upload_name1) != float:
@@ -184,12 +184,12 @@ with st.expander("###### User Content Input Area"):
 if discharge_bot_flag:
     if type(notes_df)!= int:
         if st.button("Analyze"):
+            # Analyze and generat the consolidated summary
+            st.write(discharge_bot.generate_summary(notes_df))
             # Analyze and generate the individual summary in data frame
             individual_result_df =discharge_bot.generate_individual_summary(notes_df)
+            st.dataframe(individual_result_df)
             discharge_bot.download_button(individual_result_df)
-            # Analyze and generat the consolidated summary
-            discharge_bot.generate_summary(individual_result_df)
-
             
 else:
     if anthropic.api_key:
@@ -228,7 +228,7 @@ else:
             else:
                 if ("context_01" in st.session_state):
                     # create a text input widget for a question
-                    question = st.text_area("##### Human Instruction to AI", label_visibility="visible")
+                    question = st.text_area("##### Ask a question", label_visibility="visible")
                     # create a button to run the model
             if st.button("Run"):
                 if fin_hr_pcm_flag == True:
