@@ -4,6 +4,8 @@ PyPDF2==3.0.1
 streamlit==1.22.0
 pandas
 duckduckgo_search
-sentence_transformers
+# sentence_transformers
 faiss-cpu
 python-docx
+httpcore
+httpx
